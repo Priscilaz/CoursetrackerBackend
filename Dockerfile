@@ -1,20 +1,22 @@
 # Etapa de compilación
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
-# Copiar el archivo del proyecto y restaurar dependencias
+# Copiar archivo del proyecto y restaurar dependencias
 COPY *.csproj ./
 RUN dotnet restore
 
-# Copiar el resto del código y compilar
+# Copiar el resto del código y publicar
 COPY . ./
 RUN dotnet publish -c Release -o out
 
-# Etapa final: contenedor liviano
-FROM mcr.microsoft.com/dotnet/aspnet:7.0
+# Etapa final: imagen ligera
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/out .
 
-# Exponer puerto y ejecutar app
+# Exponer el puerto por defecto
 EXPOSE 80
+
+# Iniciar la aplicación
 ENTRYPOINT ["dotnet", "CourseTracker.dll"]
