@@ -1,0 +1,12 @@
+# Archivos de Visual Studio
+.vs/
+*.user
+*.suo
+
+# Compilación
+bin/
+obj/
+
+# Configuración local
+appsettings.Development.json
+appsettings.Local.json
