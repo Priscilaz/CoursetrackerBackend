@@ -16,5 +16,8 @@ namespace CourseTracker.Models
         public string Cedula { get; set; } = string.Empty;
 
         public float HorasDisponibles { get; set; }
+
+        public ICollection<EmpleadoCurso> CursosAsignados { get; set; }
+
     }
 }

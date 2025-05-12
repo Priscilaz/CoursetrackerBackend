@@ -10,5 +10,7 @@ namespace CourseTracker.Data
 
         public DbSet<Curso> Cursos { get; set; }
         public DbSet<Empleado> Empleados { get; set; }
+        public DbSet<EmpleadoCurso> EmpleadoCursos { get; set; }
+
     }
 }
