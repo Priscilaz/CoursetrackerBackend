@@ -17,7 +17,7 @@ namespace CourseTracker.Models
 
         public float HorasDisponibles { get; set; }
 
-        public ICollection<EmpleadoCurso> CursosAsignados { get; set; }
+        public ICollection<EmpleadoCurso> CursosAsignados { get; set; } = new List<EmpleadoCurso>();
 
     }
 }
