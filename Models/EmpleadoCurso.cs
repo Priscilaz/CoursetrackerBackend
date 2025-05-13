@@ -8,10 +8,10 @@ public class EmpleadoCurso
     public int EmpleadoId { get; set; }
 
     [JsonIgnore]
-    public Empleado Empleado { get; set; }
+    public Empleado? Empleado { get; set; }
 
     public int CursoId { get; set; }
 
     [JsonIgnore]
-    public Curso Curso { get; set; }
+    public Curso? Curso { get; set; }
 }
