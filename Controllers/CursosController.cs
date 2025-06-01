@@ -1,4 +1,7 @@
-﻿using CourseTracker.Data;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using CourseTracker.Data;
 using CourseTracker.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,64 +19,93 @@ namespace CourseTracker.Controllers
             _context = context;
         }
 
-        [HttpGet("listar")]
-        public async Task<ActionResult<IEnumerable<Curso>>> Listar()
+        // GET: api/Cursos
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Curso>>> GetCursos()
         {
             return await _context.Cursos.ToListAsync();
         }
 
-        [HttpPost("crear")]
-        public async Task<ActionResult<Curso>> Crear(Curso curso)
+        // GET: api/Cursos/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Curso>> GetCurso(int id)
+        {
+            var curso = await _context.Cursos.FindAsync(id);
+            if (curso == null)
+                return NotFound("Curso no encontrado.");
+            return curso;
+        }
+
+        // POST: api/Cursos
+        [HttpPost]
+        public async Task<ActionResult<Curso>> CrearCurso(Curso curso)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            // Validar nombre único de curso
+            bool existe = await _context.Cursos
+                .AnyAsync(c => c.Nombre.ToLower() == curso.Nombre.ToLower());
+            if (existe)
+                return BadRequest($"Ya existe un curso llamado '{curso.Nombre}'.");
+
             _context.Cursos.Add(curso);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(Obtener), new { id = curso.CursoId }, curso);
+            return CreatedAtAction(nameof(GetCurso), new { id = curso.CursoId }, curso);
         }
 
-        [HttpGet("obtener/{id}")]
-        public async Task<ActionResult<Curso>> Obtener(int id)
+        // PUT: api/Cursos/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> EditarCurso(int id, Curso curso)
         {
-            var curso = await _context.Cursos.FindAsync(id);
-            if (curso == null) return NotFound();
-            return curso;
-        }
+            if (id != curso.CursoId)
+                return BadRequest("El ID no coincide.");
 
-        [HttpPut("editar/{id}")]
-        public async Task<IActionResult> Editar(int id, Curso curso)
-        {
-            if (id != curso.CursoId) return BadRequest();
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            _context.Entry(curso).State = EntityState.Modified;
+            var cursoExistente = await _context.Cursos.FindAsync(id);
+            if (cursoExistente == null)
+                return NotFound("Curso no existe.");
+
+            // Si cambió el nombre, validar duplicados
+            if (!cursoExistente.Nombre.Equals(curso.Nombre, System.StringComparison.OrdinalIgnoreCase))
+            {
+                bool existeNombre = await _context.Cursos
+                    .AnyAsync(c => c.Nombre.ToLower() == curso.Nombre.ToLower() && c.CursoId != id);
+                if (existeNombre)
+                    return BadRequest($"Otro curso ya tiene el nombre '{curso.Nombre}'.");
+            }
+
+            // Actualizar campos
+            cursoExistente.Nombre = curso.Nombre;
+            cursoExistente.Descripcion = curso.Descripcion;
+            cursoExistente.DuracionHoras = curso.DuracionHoras;
 
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateException ex)
             {
-                if (!_context.Cursos.Any(e => e.CursoId == id)) return NotFound();
-                throw;
+                return BadRequest($"Error al actualizar: {ex.Message}");
             }
 
             return NoContent();
         }
 
-        [HttpDelete("eliminar/{id}")]
-        public async Task<IActionResult> Eliminar(int id)
+        // DELETE: api/Cursos/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> EliminarCurso(int id)
         {
             var curso = await _context.Cursos.FindAsync(id);
-            if (curso == null) return NotFound();
+            if (curso == null)
+                return NotFound("Curso no existe.");
 
             _context.Cursos.Remove(curso);
             await _context.SaveChangesAsync();
-
             return NoContent();
         }
     }
-
 }

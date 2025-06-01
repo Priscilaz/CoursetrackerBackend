@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace CourseTracker.Models
 {
@@ -6,18 +7,22 @@ namespace CourseTracker.Models
     {
         public int EmpleadoId { get; set; }
 
-        public string Nombre { get; set; } = string.Empty;
-
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
+        [Required]
+        [StringLength(100)]
+        public string Nombre { get; set; }
 
         [Required]
-        [RegularExpression(@"^\d{10}$", ErrorMessage = "La cédula debe tener exactamente 10 dígitos.")]
-        public string Cedula { get; set; } = string.Empty;
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "La cédula debe contener exactamente 10 dígitos.")]
+        public string Cedula { get; set; }
 
-        public float HorasDisponibles { get; set; }
+        [Required]
+        [EmailAddress(ErrorMessage = "Formato de correo inválido.")]
+        [StringLength(150)]
+        public string Email { get; set; }
 
-        public ICollection<EmpleadoCurso> CursosAsignados { get; set; } = new List<EmpleadoCurso>();
+        [Range(typeof(decimal), "0", "9999", ErrorMessage = "Las horas disponibles deben ser un número decimal ≥ 0.")]
+        public decimal HorasDisponibles { get; set; }
 
+        public ICollection<EmpleadoCurso> EmpleadoCursos { get; set; }
     }
 }

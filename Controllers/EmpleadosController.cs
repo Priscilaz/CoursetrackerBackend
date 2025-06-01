@@ -1,4 +1,7 @@
-﻿using CourseTracker.Data;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using CourseTracker.Data;
 using CourseTracker.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,81 +19,125 @@ namespace CourseTracker.Controllers
             _context = context;
         }
 
-        [HttpGet("listar")]
-        public async Task<ActionResult<IEnumerable<Empleado>>> Listar()
+        // GET: api/Empleados
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Empleado>>> GetEmpleados()
         {
             return await _context.Empleados.ToListAsync();
         }
 
-        [HttpPost("crear")]
-        public async Task<ActionResult<Empleado>> Crear(Empleado empleado)
+        // GET: api/Empleados/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Empleado>> GetEmpleado(int id)
+        {
+            var empleado = await _context.Empleados.FindAsync(id);
+            if (empleado == null)
+                return NotFound("Empleado no encontrado.");
+            return empleado;
+        }
+
+        // POST: api/Empleados
+        [HttpPost]
+        public async Task<ActionResult<Empleado>> CrearEmpleado(Empleado empleado)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            // Validar cédula única
+            bool existeCedula = await _context.Empleados
+                .AnyAsync(e => e.Cedula == empleado.Cedula);
+            if (existeCedula)
+                return BadRequest($"Ya existe un empleado con cédula '{empleado.Cedula}'.");
+
+            // Validar nombre único
+            bool existeNombre = await _context.Empleados
+                .AnyAsync(e => e.Nombre.ToLower() == empleado.Nombre.ToLower());
+            if (existeNombre)
+                return BadRequest($"Ya existe un empleado con nombre '{empleado.Nombre}'.");
+
             _context.Empleados.Add(empleado);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(Obtener), new { id = empleado.EmpleadoId }, empleado);
+            return CreatedAtAction(nameof(GetEmpleado), new { id = empleado.EmpleadoId }, empleado);
         }
 
-        [HttpGet("obtener/{id}")]
-        public async Task<ActionResult<Empleado>> Obtener(int id)
+        // PUT: api/Empleados/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> EditarEmpleado(int id, Empleado empleado)
         {
-            var empleado = await _context.Empleados.FindAsync(id);
-            if (empleado == null) return NotFound();
-            return empleado;
-        }
+            if (id != empleado.EmpleadoId)
+                return BadRequest("El ID de la URL no coincide con el del payload.");
 
-        [HttpPut("editar/{id}")]
-        public async Task<IActionResult> Editar(int id, Empleado empleado)
-        {
-            if (id != empleado.EmpleadoId) return BadRequest();
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            _context.Entry(empleado).State = EntityState.Modified;
+            var empleadoExistente = await _context.Empleados.FindAsync(id);
+            if (empleadoExistente == null)
+                return NotFound("Empleado no encontrado.");
+
+            // Si cambió la cédula, validar duplicados
+            if (empleadoExistente.Cedula != empleado.Cedula)
+            {
+                bool existeCedula = await _context.Empleados
+                    .AnyAsync(e => e.Cedula == empleado.Cedula && e.EmpleadoId != id);
+                if (existeCedula)
+                    return BadRequest($"Ya existe otro empleado con cédula '{empleado.Cedula}'.");
+            }
+
+            // Si cambió el nombre, validar duplicados
+            if (!empleadoExistente.Nombre.Equals(empleado.Nombre, System.StringComparison.OrdinalIgnoreCase))
+            {
+                bool existeNombre = await _context.Empleados
+                    .AnyAsync(e => e.Nombre.ToLower() == empleado.Nombre.ToLower() && e.EmpleadoId != id);
+                if (existeNombre)
+                    return BadRequest($"Ya existe otro empleado con nombre '{empleado.Nombre}'.");
+            }
+
+            // Actualizar campos permitidos
+            empleadoExistente.Nombre = empleado.Nombre;
+            empleadoExistente.Cedula = empleado.Cedula;
+            empleadoExistente.Email = empleado.Email;
+            empleadoExistente.HorasDisponibles = empleado.HorasDisponibles;
 
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateException ex)
             {
-                if (!_context.Empleados.Any(e => e.EmpleadoId == id)) return NotFound();
-                throw;
+                return BadRequest($"Error al actualizar: {ex.Message}");
             }
 
             return NoContent();
         }
 
-        [HttpDelete("eliminar/{id}")]
-        public async Task<IActionResult> Eliminar(int id)
+        // DELETE: api/Empleados/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> EliminarEmpleado(int id)
         {
             var empleado = await _context.Empleados.FindAsync(id);
-            if (empleado == null) return NotFound();
+            if (empleado == null)
+                return NotFound("Empleado no existe.");
 
             _context.Empleados.Remove(empleado);
             await _context.SaveChangesAsync();
-
             return NoContent();
         }
 
-
-        [HttpGet("recomendar-cursos/{id}")]
-        public async Task<ActionResult<IEnumerable<Curso>>> RecomendarCursos(int id)
+        // GET: api/Empleados/5/cursos-recomendados
+        [HttpGet("{id}/cursos-recomendados")]
+        public async Task<ActionResult<IEnumerable<Curso>>> GetCursosRecomendados(int id)
         {
             var empleado = await _context.Empleados.FindAsync(id);
-
             if (empleado == null)
                 return NotFound("Empleado no encontrado.");
 
-            var cursos = await _context.Cursos
+            // Solo devolver los cursos cuya DuracionHoras ≤ HorasDisponibles del empleado
+            var cursosValidos = await _context.Cursos
                 .Where(c => c.DuracionHoras <= empleado.HorasDisponibles)
                 .ToListAsync();
 
-            return cursos;
+            return cursosValidos;
         }
-
     }
-
 }
