@@ -22,7 +22,7 @@ namespace CourseTracker.Controllers
 
         // POST: api/EmpleadoCurso/asignar
         [HttpPost("asignar")]
-        public async Task<IActionResult> AsignarCurso([FromBody] EmpleadoCurso dto)
+        public async Task<IActionResult> AsignarCurso([FromBody] EmpleadoCursoCreateDTO dto)
         {
             // 1. Verificar que el empleado exista
             var empleado = await _context.Empleados.FindAsync(dto.EmpleadoId);
