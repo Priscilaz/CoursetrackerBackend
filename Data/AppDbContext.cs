@@ -13,7 +13,8 @@ namespace CourseTracker.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
+           
+            
 
             // Índice único sobre Cedula
             modelBuilder.Entity<Empleado>()
@@ -38,6 +39,7 @@ namespace CourseTracker.Data
             // Configuración de la entidad puente EmpleadoCurso
             modelBuilder.Entity<EmpleadoCurso>()
                 .HasKey(ec => new { ec.EmpleadoId, ec.CursoId });
+            base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<EmpleadoCurso>()
                 .HasOne(ec => ec.Empleado)

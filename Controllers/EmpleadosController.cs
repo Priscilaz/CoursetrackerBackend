@@ -18,6 +18,116 @@ namespace CourseTracker.Controllers
         {
             _context = context;
         }
+        ///CAMBIOS
+
+        [HttpGet("cursoMasAsignado")]
+        public async Task<IActionResult> GetCursoMasAsignado()
+        {
+            
+            var grupo = await _context.EmpleadoCursos
+                .GroupBy(ec => ec.CursoId)
+                .Select(g => new
+                {
+                    CursoId = g.Key,
+                    Asignaciones = g.Count()
+                })
+                .OrderByDescending(x => x.Asignaciones)
+                .FirstOrDefaultAsync();
+
+            if (grupo == null)
+            {
+                return NotFound("No hay cursos asignados a ningún empleado.");
+            }
+
+          
+            var curso = await _context.Cursos.FindAsync(grupo.CursoId);
+            if (curso == null)
+            {
+                return NotFound($"No se encontró el curso con ID {grupo.CursoId}.");
+            }
+
+            
+            return Ok(new
+            {
+                Curso = new
+                {
+                    curso.CursoId,
+                    curso.Nombre,
+                    curso.DuracionHoras
+                },
+                CantidadAsignaciones = grupo.Asignaciones
+            });
+        }
+
+
+
+        [HttpGet("personaMasLibre")]
+        public async Task<IActionResult> GetPersonaMasLibre()
+        {
+           
+
+            var consulta = await _context.Empleados
+                .Select(e => new
+                {
+                    Empleado = e,
+                    HorasUsadas = e.EmpleadoCursos.Sum(ec => ec.Curso.DuracionHoras)
+                })
+                .Select(x => new
+                {
+                    x.Empleado.EmpleadoId,
+                    x.Empleado.Nombre,
+                    x.Empleado.HorasDisponibles,
+                    HorasUsadas = x.HorasUsadas,
+                    HorasLibres = x.Empleado.HorasDisponibles - x.HorasUsadas
+                })
+                .OrderByDescending(x => x.HorasLibres)
+                .FirstOrDefaultAsync();
+
+            if (consulta == null)
+            {
+                return NotFound("No se encontró ningún empleado.");
+            }
+
+            return Ok(new
+            {
+                Empleado = new
+                {
+                    consulta.EmpleadoId,
+                    consulta.Nombre,
+                    consulta.HorasDisponibles
+                },
+                HorasUsadas = consulta.HorasUsadas,
+                HorasLibres = consulta.HorasLibres
+            });
+        }
+
+        [HttpGet("horasPorCurso")]
+        public async Task<IActionResult> GetHorasPorCurso()
+        {
+           
+            var resultado = await _context.Cursos
+                .Select(c => new
+                {
+                    CursoId = c.CursoId,
+                    c.Nombre,
+                    c.DuracionHoras,
+                    
+                    CantidadAsignaciones = c.EmpleadoCursos.Count(),
+                    
+                    TotalHorasAsignadas = c.EmpleadoCursos.Count() * c.DuracionHoras
+                })
+                .ToListAsync();
+
+            
+            if (resultado == null || !resultado.Any())
+            {
+                return NotFound("No se encontró ningún curso.");
+            }
+
+            return Ok(resultado);
+        }
+
+        ///CAMBIOS
 
         // GET: api/Empleados
         [HttpGet]
@@ -139,5 +249,10 @@ namespace CourseTracker.Controllers
 
             return cursosValidos;
         }
+
+
+        
+        
+
     }
 }
